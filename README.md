@@ -1,5 +1,7 @@
 # GitHub Crawler
 
+**NOTE: This is a coding challenge for a job application. So the script is limited and parses only the first page of search results.**
+
 This is a Python script to search GitHub for repositories, issues, or wikis based on specified search parameters. The script is implemented using `argparse`, `json`, `re`, `requests`, `typing`, `enum`, `lxml`, and `pydantic` libraries.
 
 ## Installation
@@ -55,4 +57,18 @@ To search for repositories based on the configuration file "config2.json" and sa
 
 ```
 $ python main.py --config_path config2.json --results_path results2.json
+```
+
+## Tests, Code Formatting, and Type Checking
+To run the tests, use the following command:
+```
+$ pytest --cov=main tests/
+```
+To check the code formatting with Black, use the following command:
+```
+$ black .
+```
+To run the type checker with Mypy, use the following command:
+```
+$ mypy .
 ```

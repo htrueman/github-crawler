@@ -10,6 +10,10 @@ from pydantic import BaseModel, validator
 from urllib.parse import urlparse
 
 
+DEFAULT_CONFIG_PATH = "config.json"
+DEFAULT_RESULTS_PATH = "results.json"
+
+
 class InvalidResponseStatusError(Exception):
     def __init__(self, status_code, message="Request failed with status code"):
         self.message = f"{message}: {status_code}"
@@ -30,10 +34,7 @@ class SearchParams(BaseModel):
     @validator("proxies")
     def validate_proxies(cls, proxies):
         for proxy in proxies:
-            # Use regular expression to check for valid proxy format
-            if not re.match(
-                r"^(\w+:\w+@)?\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}$", proxy
-            ):
+            if not re.match(r"^(https?://)?(\w+:?\w*@)?([^\s/:]+)(:\d+)?", proxy):
                 raise ValueError("Invalid proxy format")
         return proxies
 
@@ -43,15 +44,15 @@ class GitHubCrawler:
         parser = argparse.ArgumentParser(description="GitHub crawler script.")
         parser.add_argument(
             "--config_path",
-            default="config.json",
+            default=DEFAULT_CONFIG_PATH,
             help="Path to the search parameters JSON file.",
         )
         parser.add_argument(
             "--results_path",
-            default="results.json",
+            default=DEFAULT_RESULTS_PATH,
             help="Path to save the search results JSON file.",
         )
-        args = parser.parse_args()
+        args, _ = parser.parse_known_args()
 
         self.config_path = args.config_path
         self.results_path = args.results_path
@@ -98,7 +99,7 @@ class GitHubCrawler:
     def get_random_proxy(proxies: list[str]) -> dict:
         proxy = random_choice(proxies)
         parsed_proxy = urlparse(proxy)
-        return {parsed_proxy.scheme: parsed_proxy}
+        return {parsed_proxy.scheme or "http": proxy}
 
     @staticmethod
     def parse_search_results(html_string: str) -> list[dict]:
