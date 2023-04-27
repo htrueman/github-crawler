@@ -15,7 +15,9 @@ DEFAULT_RESULTS_PATH = "results.json"
 
 
 class InvalidResponseStatusError(Exception):
-    def __init__(self, status_code: int, message: str = "Request failed with status code"):
+    def __init__(
+        self, status_code: int, message: str = "Request failed with status code"
+    ):
         self.message = f"{message}: {status_code}"
         super().__init__(self.message)
 
