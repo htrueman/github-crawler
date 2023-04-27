@@ -15,7 +15,7 @@ DEFAULT_RESULTS_PATH = "results.json"
 
 
 class InvalidResponseStatusError(Exception):
-    def __init__(self, status_code, message="Request failed with status code"):
+    def __init__(self, status_code: int, message: str = "Request failed with status code"):
         self.message = f"{message}: {status_code}"
         super().__init__(self.message)
 
@@ -32,7 +32,7 @@ class SearchParams(BaseModel):
     type: SearchType
 
     @validator("proxies")
-    def validate_proxies(cls, proxies):
+    def validate_proxies(cls, proxies: list[str]) -> list[str]:
         for proxy in proxies:
             if not re.match(r"^(https?://)?(\w+:?\w*@)?([^\s/:]+)(:\d+)?", proxy):
                 raise ValueError("Invalid proxy format")
@@ -63,7 +63,7 @@ class GitHubCrawler:
         }
         self.session.proxies = self.get_random_proxy(self.search_params.proxies)
 
-    def run(self):
+    def run(self) -> None:
         search_url = self.compose_search_url(self.search_params)
         search_page_html = self.retrieve_search_page_html(search_url)
         results = self.parse_search_results(search_page_html)
@@ -133,7 +133,7 @@ class GitHubCrawler:
         )
         for language_share in language_shares:
             language, share = language_share.split(" ")
-            results[language] = share
+            results[language] = round(float(share), 2)
         return results
 
     def update_results(self, results: list[dict]) -> list[dict]:
