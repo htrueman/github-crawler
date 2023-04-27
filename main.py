@@ -67,6 +67,8 @@ class GitHubCrawler:
         search_url = self.compose_search_url(self.search_params)
         search_page_html = self.retrieve_search_page_html(search_url)
         results = self.parse_search_results(search_page_html)
+        if self.search_params.type == SearchType.REPOSITORIES:
+            results = self.update_results(results)
         self.write_results(results, self.results_path)
 
     @staticmethod
@@ -117,6 +119,31 @@ class GitHubCrawler:
         for link in result_links:
             repo_url = f"https://github.com{link}"
             results.append({"url": repo_url})
+        return results
+
+    @staticmethod
+    def parse_repo_page(html_string: str) -> dict:
+        results = {}
+        root = html.fromstring(html_string)
+        language_shares = cast(
+            list[str],
+            root.xpath(
+                "//div[contains(@class, 'BorderGrid')]/descendant::span[contains(@class, 'Progress-item')]/@aria-label"
+            ),
+        )
+        for language_share in language_shares:
+            language, share = language_share.split(" ")
+            results[language] = share
+        return results
+
+    def update_results(self, results: list[dict]) -> list[dict]:
+        for result in results:
+            repo_url = result["url"]
+            repo_page_html = self.retrieve_search_page_html(repo_url)
+            language_stats = self.parse_repo_page(repo_page_html)
+            parsed_url = urlparse(repo_url)
+            owner = parsed_url.path.split("/")[1]
+            result.update({"extra": {"owner": owner, "language_stats": language_stats}})
         return results
 
     @staticmethod

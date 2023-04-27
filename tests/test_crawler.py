@@ -190,3 +190,50 @@ def test_run(mock_get, mock_response):
     assert len(results) == 2
     assert results[0]["url"] == "https://github.com/atuldjadhav/DropBox-Cloud-Storage"
     assert results[1]["url"] == "https://github.com/michealbalogun/Horizon-dashboard"
+
+
+def test_parse_repo_page():
+    with open("tests/fixtures/repo_page.html", "r") as f:
+        html_page = f.read()
+
+    results = GitHubCrawler.parse_repo_page(html_page)
+
+    assert isinstance(results, dict)
+    assert results == {"CSS": "52.0", "HTML": "0.8", "JavaScript": "47.2"}
+
+
+def test_update_results(crawler):
+    results = [
+        {"url": "https://github.com/user1/repo1"},
+        {"url": "https://github.com/user2/repo2"},
+    ]
+    expected_results = [
+        {
+            "url": "https://github.com/user1/repo1",
+            "extra": {
+                "owner": "user1",
+                "language_stats": {"Python": "80%", "HTML": "20%"},
+            },
+        },
+        {
+            "url": "https://github.com/user2/repo2",
+            "extra": {
+                "owner": "user2",
+                "language_stats": {"Python": "80%", "HTML": "20%"},
+            },
+        },
+    ]
+
+    mock_session = mock.MagicMock()
+    mock_response = mock.MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = "<html>...</html>"
+    mock_session.get.return_value = mock_response
+
+    crawler.parse_repo_page = mock.MagicMock(
+        return_value={"Python": "80%", "HTML": "20%"}
+    )
+    crawler.session = mock_session
+    actual_results = crawler.update_results(results)
+
+    assert actual_results == expected_results

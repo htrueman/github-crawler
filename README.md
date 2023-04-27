@@ -59,6 +59,32 @@ To search for repositories based on the configuration file "config2.json" and sa
 $ python main.py --config_path config2.json --results_path results2.json
 ```
 
+### Sample Results Output
+```
+[
+    {
+        "url": "https://github.com/atuldjadhav/DropBox-Cloud-Storage",
+        "extra": {
+            "owner": "atuldjadhav",
+            "language_stats": {
+                "CSS": "52.0",
+                "JavaScript": "47.2",
+                "HTML": "0.8"
+            }
+        }
+    },
+    {
+        "url": "https://github.com/michealbalogun/Horizon-dashboard",
+        "extra": {
+            "owner": "michealbalogun",
+            "language_stats": {
+                "Python": "100.0"
+            }
+        }
+    }
+]
+```
+
 ## Tests, Code Formatting, and Type Checking
 To run the tests, use the following command:
 ```
@@ -72,3 +98,21 @@ To run the type checker with Mypy, use the following command:
 ```
 $ mypy .
 ```
+
+## Ideas and Thoughts of Improvements
+
+1. Add support for pagination: Currently, the script only processes the first page of search results. Adding support for pagination would allow the script to retrieve and process more search results.
+
+1. Implement a retry mechanism: Sometimes requests may fail due to various reasons such as network issues, server errors, or rate limits. Implementing a retry mechanism would enable the script to retry the failed requests automatically.
+
+1. Add support for multiple search types: Currently, the script only supports repositories, issues, and wikis. Adding support for other search types such as users, organizations, and topics would increase the script's flexibility.
+
+1. Implement caching: Caching the search results and language statistics for a certain period of time could improve the script's performance and reduce the number of requests sent to GitHub.
+
+1. Add support for multiple search engines: Currently, the script only uses GitHub for searching. Adding support for other search engines such as GitLab, Bitbucket, and SourceForge would enable the script to retrieve search results from different sources.
+
+1. Improve error handling: The script could be improved by adding more detailed error messages and handling different types of errors more gracefully.
+
+1. Add support for more search parameters: Currently, the script only supports keywords and proxies. Adding support for other search parameters such as filters, language, and date range would increase the script's versatility.
+
+1. Implement multithreading: The script could be improved by implementing multithreading to process multiple search results simultaneously, which could significantly reduce the execution time.
