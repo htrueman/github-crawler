@@ -79,11 +79,12 @@ def test_retrieve_search_page_html_success(mock_get, crawler):
     mock_get.return_value = mock_response
 
     url = "http://example.com"
+    params = {"q": "test", "page": 1, "type": "Issues"}
 
-    result = crawler.retrieve_search_page_html(url)
+    result = crawler.retrieve_search_page_html(url, params)
 
     assert result == "<html><body>test</body></html>"
-    mock_get.assert_called_once_with(url)
+    mock_get.assert_called_once_with(url, params=params)
 
 
 @mock.patch("requests.Session.get")
@@ -93,11 +94,12 @@ def test_retrieve_search_page_html_failure(mock_get, crawler):
     mock_get.return_value = mock_response
 
     url = "http://example.com"
+    params = {"q": "test", "page": 1, "type": "Issues"}
 
     with pytest.raises(InvalidResponseStatusError):
-        crawler.retrieve_search_page_html(url)
+        crawler.retrieve_search_page_html(url, params)
 
-    mock_get.assert_called_once_with(url)
+    mock_get.assert_called_once_with(url, params=params)
 
 
 def test_get_random_proxy():

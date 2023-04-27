@@ -7,11 +7,13 @@ from enum import Enum
 from lxml import html
 from random import choice as random_choice
 from pydantic import BaseModel, validator
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 
 DEFAULT_CONFIG_PATH = "config.json"
 DEFAULT_RESULTS_PATH = "results.json"
+
+SEARCH_URL = "https://github.com/search"
 
 
 class InvalidResponseStatusError(Exception):
@@ -52,8 +54,8 @@ class GitHubCrawler:
         self.session.proxies = self.get_random_proxy(self.search_params.proxies)
 
     def run(self) -> list[dict]:
-        search_url = self.compose_search_url(self.search_params)
-        search_page_html = self.retrieve_search_page_html(search_url)
+        search_url, query_params = self.compose_search_query_params(self.search_params)
+        search_page_html = self.retrieve_search_page_html(search_url, query_params)
         results = self.parse_search_results(search_page_html)
         if self.search_params.type == SearchType.REPOSITORIES:
             results = self.update_results(results)
@@ -69,15 +71,16 @@ class GitHubCrawler:
             return "is:issue"
         return ""
 
-    def compose_search_url(self, search_params: SearchParams) -> str:
-        base_url = "https://github.com/search"
+    def compose_search_query_params(
+        self, search_params: SearchParams
+    ) -> tuple[str, dict]:
         type_filter = self.get_is_issue_filter(search_params.type)
-        keywords = f"{type_filter}+".join(search_params.keywords)
-        url = f"{base_url}?q={keywords}&type={search_params.type.value}"
-        return url
+        keywords = "+".join([*search_params.keywords, type_filter])
+        query_params = {"q": keywords, "type": search_params.type.value}
+        return SEARCH_URL, query_params
 
-    def retrieve_search_page_html(self, url: str) -> str:
-        r = self.session.get(url)
+    def retrieve_search_page_html(self, url: str, params: dict) -> str:
+        r = self.session.get(url, params=params)
         if r.status_code != 200:
             raise InvalidResponseStatusError(r.status_code)
         return r.text
@@ -92,14 +95,14 @@ class GitHubCrawler:
     def parse_search_results(html_string: str) -> list[dict]:
         results = []
         root = html.fromstring(html_string)
-        result_links = cast(
+        result_paths = cast(
             list[str],
             root.xpath(
                 "//div[contains(@class, 'text-normal')]/descendant::a[starts-with(@href, '/')][1]/@href"
             ),
         )
-        for link in result_links:
-            repo_url = f"https://github.com{link}"
+        for path in result_paths:
+            repo_url = urljoin("https://github.com", path)
             results.append({"url": repo_url})
         return results
 
@@ -121,7 +124,7 @@ class GitHubCrawler:
     def update_results(self, results: list[dict]) -> list[dict]:
         for result in results:
             repo_url = result["url"]
-            repo_page_html = self.retrieve_search_page_html(repo_url)
+            repo_page_html = self.retrieve_search_page_html(repo_url, {})
             language_stats = self.parse_repo_page(repo_page_html)
             parsed_url = urlparse(repo_url)
             owner = parsed_url.path.split("/")[1]
