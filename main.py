@@ -56,12 +56,16 @@ class GitHubCrawler:
 
         self.config_path = args.config_path
         self.results_path = args.results_path
+        self.search_params = self.read_search_params(self.config_path)
+        self.session = requests.Session()
+        self.session.headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
+        }
+        self.session.proxies = self.get_random_proxy(self.search_params.proxies)
 
     def run(self):
-        search_params = self.read_search_params(self.config_path)
-        search_url = self.compose_search_url(search_params)
-        proxy = self.get_random_proxy(search_params.proxies)
-        search_page_html = self.retrieve_search_page_html(search_url, proxy)
+        search_url = self.compose_search_url(self.search_params)
+        search_page_html = self.retrieve_search_page_html(search_url)
         results = self.parse_search_results(search_page_html)
         self.write_results(results, self.results_path)
 
@@ -85,12 +89,11 @@ class GitHubCrawler:
         base_url = "https://github.com/search"
         type_filter = self.get_is_issue_filter(search_params.type)
         keywords = f"{type_filter}+".join(search_params.keywords)
-        url = f"{base_url}?q={keywords}&type={search_params.type}"
+        url = f"{base_url}?q={keywords}&type={search_params.type.value}"
         return url
 
-    @staticmethod
-    def retrieve_search_page_html(url: str, proxy: dict) -> str:
-        r = requests.get(url, proxies=proxy)
+    def retrieve_search_page_html(self, url: str) -> str:
+        r = self.session.get(url)
         if r.status_code != 200:
             raise InvalidResponseStatusError(r.status_code)
         return r.text

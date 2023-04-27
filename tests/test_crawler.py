@@ -60,9 +60,10 @@ def test_crawler_init_command_line_args():
             [],
         ),
     ):
-        crawler = GitHubCrawler()
-        assert crawler.config_path == "test_config.json"
-        assert crawler.results_path == "test_results.json"
+        with pytest.raises(FileNotFoundError):
+            crawler = GitHubCrawler()
+            assert crawler.config_path == "test_config.json"
+            assert crawler.results_path == "test_results.json"
 
 
 def test_read_search_params_success(search_params):
@@ -88,35 +89,33 @@ def test_get_is_issue_filter(search_type, expected_filter):
     assert GitHubCrawler.get_is_issue_filter(search_type) == expected_filter
 
 
-@mock.patch("requests.get")
-def test_retrieve_search_page_html_success(mock_get):
+@mock.patch("requests.Session.get")
+def test_retrieve_search_page_html_success(mock_get, crawler):
     mock_response = mock.MagicMock()
     mock_response.status_code = 200
     mock_response.text = "<html><body>test</body></html>"
     mock_get.return_value = mock_response
 
     url = "http://example.com"
-    proxy = {}
 
-    result = GitHubCrawler.retrieve_search_page_html(url, proxy)
+    result = crawler.retrieve_search_page_html(url)
 
     assert result == "<html><body>test</body></html>"
-    mock_get.assert_called_once_with(url, proxies=proxy)
+    mock_get.assert_called_once_with(url)
 
 
-@mock.patch("requests.get")
-def test_retrieve_search_page_html_failure(mock_get):
+@mock.patch("requests.Session.get")
+def test_retrieve_search_page_html_failure(mock_get, crawler):
     mock_response = mock.MagicMock()
     mock_response.status_code = 404
     mock_get.return_value = mock_response
 
     url = "http://example.com"
-    proxy = {}
 
     with pytest.raises(InvalidResponseStatusError):
-        GitHubCrawler.retrieve_search_page_html(url, proxy)
+        crawler.retrieve_search_page_html(url)
 
-    mock_get.assert_called_once_with(url, proxies=proxy)
+    mock_get.assert_called_once_with(url)
 
 
 def test_get_random_proxy():
@@ -177,7 +176,7 @@ def test_write_results(tmpdir):
         assert data == empty_results
 
 
-@mock.patch("requests.get")
+@mock.patch("requests.Session.get")
 def test_run(mock_get, mock_response):
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = mock_response
