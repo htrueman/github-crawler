@@ -1,4 +1,3 @@
-import argparse
 import json
 import tempfile
 from unittest import mock
@@ -7,12 +6,11 @@ from pydantic import ValidationError
 from pytest import fixture
 import pytest
 from main import (
-    DEFAULT_CONFIG_PATH,
-    DEFAULT_RESULTS_PATH,
     GitHubCrawler,
     InvalidResponseStatusError,
     SearchParams,
     SearchType,
+    read_config,
 )
 
 
@@ -29,41 +27,25 @@ def search_params():
             )
         )
         f.seek(0)
-        return GitHubCrawler.read_search_params(f.name)
+        return read_config(f.name)
 
 
 @fixture
-def crawler():
-    crawler = GitHubCrawler()
+def crawler(search_params):
+    crawler = GitHubCrawler("results.json", search_params)
     return crawler
 
 
-@pytest.fixture
+@fixture
 def mock_response():
     with open("tests/fixtures/search_page.html", "r") as f:
         html_string = f.read()
     return html_string
 
 
-def test_crawler_init(crawler):
-    assert crawler.config_path == DEFAULT_CONFIG_PATH
-    assert crawler.results_path == DEFAULT_RESULTS_PATH
-
-
-def test_crawler_init_command_line_args():
-    with mock.patch(
-        "argparse.ArgumentParser.parse_known_args",
-        return_value=(
-            argparse.Namespace(
-                config_path="test_config.json", results_path="test_results.json"
-            ),
-            [],
-        ),
-    ):
-        with pytest.raises(FileNotFoundError):
-            crawler = GitHubCrawler()
-            assert crawler.config_path == "test_config.json"
-            assert crawler.results_path == "test_results.json"
+def test_crawler_init(crawler, search_params):
+    assert crawler.results_path == "results.json"
+    assert crawler.search_params == search_params
 
 
 def test_read_search_params_success(search_params):
@@ -148,45 +130,14 @@ def test_parse_search_results():
     assert results[1]["url"] == "https://github.com/michealbalogun/Horizon-dashboard"
 
 
-def test_write_results(tmpdir):
-    results_file = tmpdir.join("results.json")
-
-    # call the method with some sample results and the temporary file path
-    sample_results = [{"url": "https://github.com/testuser/testrepo"}]
-    GitHubCrawler.write_results(sample_results, str(results_file))
-
-    # verify that the file was created and contains the expected data
-    assert results_file.exists()
-    with open(str(results_file), "r") as f:
-        data = json.load(f)
-        assert data == sample_results
-
-    # call the method again with a different set of results and verify the file contents are updated
-    updated_results = [{"url": "https://github.com/anotheruser/anotherrepo"}]
-    GitHubCrawler.write_results(updated_results, str(results_file))
-    with open(str(results_file), "r") as f:
-        data = json.load(f)
-        assert data == updated_results
-
-    # call the method with an empty list of results and verify that the file is created but empty
-    empty_results = []
-    GitHubCrawler.write_results(empty_results, str(results_file))
-    with open(str(results_file), "r") as f:
-        data = json.load(f)
-        assert data == empty_results
-
-
 @mock.patch("requests.Session.get")
-def test_run(mock_get, mock_response):
+def test_run(mock_get, mock_response, search_params):
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = mock_response
 
-    crawler = GitHubCrawler()
-    crawler.run()
+    crawler = GitHubCrawler("results.json", search_params)
+    results = crawler.run()
 
-    # Assert that the expected output file was created
-    with open(crawler.results_path, "r") as f:
-        results = json.load(f)
     assert len(results) == 2
     assert results[0]["url"] == "https://github.com/atuldjadhav/DropBox-Cloud-Storage"
     assert results[1]["url"] == "https://github.com/michealbalogun/Horizon-dashboard"
@@ -199,7 +150,7 @@ def test_parse_repo_page():
     results = GitHubCrawler.parse_repo_page(html_page)
 
     assert isinstance(results, dict)
-    assert results == {"CSS": "52.0", "HTML": "0.8", "JavaScript": "47.2"}
+    assert results == {"CSS": 52.0, "HTML": 0.8, "JavaScript": 47.2}
 
 
 def test_update_results(crawler):

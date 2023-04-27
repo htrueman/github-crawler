@@ -42,42 +42,22 @@ class SearchParams(BaseModel):
 
 
 class GitHubCrawler:
-    def __init__(self) -> None:
-        parser = argparse.ArgumentParser(description="GitHub crawler script.")
-        parser.add_argument(
-            "--config_path",
-            default=DEFAULT_CONFIG_PATH,
-            help="Path to the search parameters JSON file.",
-        )
-        parser.add_argument(
-            "--results_path",
-            default=DEFAULT_RESULTS_PATH,
-            help="Path to save the search results JSON file.",
-        )
-        args, _ = parser.parse_known_args()
-
-        self.config_path = args.config_path
-        self.results_path = args.results_path
-        self.search_params = self.read_search_params(self.config_path)
+    def __init__(self, results_path: str, search_params: SearchParams) -> None:
+        self.results_path = results_path
+        self.search_params = search_params
         self.session = requests.Session()
         self.session.headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"
         }
         self.session.proxies = self.get_random_proxy(self.search_params.proxies)
 
-    def run(self) -> None:
+    def run(self) -> list[dict]:
         search_url = self.compose_search_url(self.search_params)
         search_page_html = self.retrieve_search_page_html(search_url)
         results = self.parse_search_results(search_page_html)
         if self.search_params.type == SearchType.REPOSITORIES:
             results = self.update_results(results)
-        self.write_results(results, self.results_path)
-
-    @staticmethod
-    def read_search_params(search_params_file: str) -> SearchParams:
-        with open(search_params_file, "r") as f:
-            search_params_json = json.load(f)
-        return SearchParams(**search_params_json)
+        return results
 
     @staticmethod
     def get_is_issue_filter(search_type: SearchType) -> str:
@@ -148,12 +128,44 @@ class GitHubCrawler:
             result.update({"extra": {"owner": owner, "language_stats": language_stats}})
         return results
 
-    @staticmethod
-    def write_results(results: list[dict], results_file: str) -> None:
-        with open(results_file, "w+") as f:
-            json.dump(results, f, indent=4)
+
+def read_command_line_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="GitHub crawler script.")
+    parser.add_argument(
+        "--config_path",
+        default=DEFAULT_CONFIG_PATH,
+        help="Path to the search parameters JSON file.",
+    )
+    parser.add_argument(
+        "--results_path",
+        default=DEFAULT_RESULTS_PATH,
+        help="Path to save the search results JSON file.",
+    )
+    args, _ = parser.parse_known_args()
+    return args
+
+
+def read_config(config_path: str) -> SearchParams:
+    with open(config_path, "r") as f:
+        search_params_json = json.load(f)
+    return SearchParams(**search_params_json)
+
+
+def write_output(results: list[dict], results_file: str) -> None:
+    with open(results_file, "w+") as f:
+        json.dump(results, f, indent=4)
+
+
+def main() -> None:
+    command_line_args = read_command_line_args()
+    search_params = read_config(command_line_args.config_path)
+    crawler = GitHubCrawler(
+        results_path=command_line_args.results_path,
+        search_params=search_params,
+    )
+    search_resutls = crawler.run()
+    write_output(search_resutls, command_line_args.results_path)
 
 
 if __name__ == "__main__":
-    crawler = GitHubCrawler()
-    crawler.run()
+    main()

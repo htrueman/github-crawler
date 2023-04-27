@@ -67,9 +67,9 @@ $ python main.py --config_path config2.json --results_path results2.json
         "extra": {
             "owner": "atuldjadhav",
             "language_stats": {
-                "CSS": "52.0",
-                "JavaScript": "47.2",
-                "HTML": "0.8"
+                "CSS": 52.0,
+                "JavaScript": 47.2,
+                "HTML": 0.8
             }
         }
     },
@@ -78,7 +78,7 @@ $ python main.py --config_path config2.json --results_path results2.json
         "extra": {
             "owner": "michealbalogun",
             "language_stats": {
-                "Python": "100.0"
+                "Python": 100.0
             }
         }
     }
